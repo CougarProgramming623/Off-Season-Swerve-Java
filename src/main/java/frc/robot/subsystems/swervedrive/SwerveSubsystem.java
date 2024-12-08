@@ -37,7 +37,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
-import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -63,7 +62,7 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Swerve drive object.
    */
-  private final SwerveDrive         swerveDrive;
+  private final SwerveDrive swerveDrive;
   /**
    * AprilTag field layout.
    */
@@ -71,12 +70,7 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Enable vision odometry updates while driving.
    */
-  private final boolean             visionDriveTest     = false;
-  /**
-   * PhotonVision class to keep an accurate odometry.
-   */
-  private       Vision              vision;
-
+  private final boolean visionDriveTest = false;
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
    *
@@ -122,7 +116,7 @@ public class SwerveSubsystem extends SubsystemBase
     swerveDrive.pushOffsetsToEncoders(); // Set the absolute encoder to be used over the internal encoder and push the offsets onto it. Throws warning if not possible
     if (visionDriveTest)
     {
-      setupPhotonVision();
+      // setupPhotonVision();
       // Stop the odometry thread if we are using vision that way we can synchronize updates better.
       swerveDrive.stopOdometryThread();
     }
@@ -144,14 +138,6 @@ public class SwerveSubsystem extends SubsystemBase
                                              Rotation2d.fromDegrees(0)));
   }
 
-  /**
-   * Setup the photon vision class.
-   */
-  public void setupPhotonVision()
-  {
-    vision = new Vision(swerveDrive::getPose, swerveDrive.field);
-  }
-
   @Override
   public void periodic()
   {
@@ -159,7 +145,6 @@ public class SwerveSubsystem extends SubsystemBase
     if (visionDriveTest)
     {
       swerveDrive.updateOdometry();
-      vision.updatePoseEstimation(swerveDrive);
     }
   }
 
@@ -237,76 +222,6 @@ public class SwerveSubsystem extends SubsystemBase
     //Preload PathPlanner Path finding
     // IF USING CUSTOM PATHFINDER ADD BEFORE THIS LINE
     PathfindingCommand.warmupCommand().schedule();
-  }
-
-  /**
-   * Get the distance to the speaker.
-   *
-   * @return Distance to speaker in meters.
-   */
-  public double getDistanceToSpeaker()
-  {
-    int allianceAprilTag = DriverStation.getAlliance().get() == Alliance.Blue ? 7 : 4;
-    // Taken from PhotonUtils.getDistanceToPose
-    Pose3d speakerAprilTagPose = aprilTagFieldLayout.getTagPose(allianceAprilTag).get();
-    return getPose().getTranslation().getDistance(speakerAprilTagPose.toPose2d().getTranslation());
-  }
-
-  /**
-   * Get the yaw to aim at the speaker.
-   *
-   * @return {@link Rotation2d} of which you need to achieve.
-   */
-  public Rotation2d getSpeakerYaw()
-  {
-    int allianceAprilTag = DriverStation.getAlliance().get() == Alliance.Blue ? 7 : 4;
-    // Taken from PhotonUtils.getYawToPose()
-    Pose3d        speakerAprilTagPose = aprilTagFieldLayout.getTagPose(allianceAprilTag).get();
-    Translation2d relativeTrl         = speakerAprilTagPose.toPose2d().relativeTo(getPose()).getTranslation();
-    return new Rotation2d(relativeTrl.getX(), relativeTrl.getY()).plus(swerveDrive.getOdometryHeading());
-  }
-
-  /**
-   * Aim the robot at the speaker.
-   *
-   * @param tolerance Tolerance in degrees.
-   * @return Command to turn the robot to the speaker.
-   */
-  public Command aimAtSpeaker(double tolerance)
-  {
-    SwerveController controller = swerveDrive.getSwerveController();
-    return run(
-        () -> {
-          ChassisSpeeds speeds = new ChassisSpeeds(0, 0,
-                                                   controller.headingCalculate(getHeading().getRadians(),
-                                                                               getSpeakerYaw().getRadians()));
-          speeds.toRobotRelativeSpeeds(getHeading());
-          drive(speeds);
-        }).until(() -> Math.abs(getSpeakerYaw().minus(getHeading()).getDegrees()) < tolerance);
-  }
-
-  /**
-   * Aim the robot at the target returned by PhotonVision.
-   *
-   * @return A {@link Command} which will run the alignment.
-   */
-  public Command aimAtTarget(Cameras camera)
-  {
-
-    return run(() -> {
-      Optional<PhotonPipelineResult> resultO = camera.getBestResult();
-      if (resultO.isPresent())
-      {
-        var result = resultO.get();
-        if (result.hasTargets())
-        {
-          drive(getTargetSpeeds(0,
-                                0,
-                                Rotation2d.fromDegrees(result.getBestTarget()
-                                                             .getYaw()))); // Not sure if this will work, more math may be required.
-        }
-      }
-    });
   }
 
   /**
@@ -802,13 +717,5 @@ public class SwerveSubsystem extends SubsystemBase
   public Rotation2d getPitch()
   {
     return swerveDrive.getPitch();
-  }
-
-  /**
-   * Add a fake vision reading for testing purposes.
-   */
-  public void addFakeVisionReading()
-  {
-    swerveDrive.addVisionMeasurement(new Pose2d(3, 3, Rotation2d.fromDegrees(65)), Timer.getFPGATimestamp());
   }
 }
