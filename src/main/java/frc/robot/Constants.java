@@ -131,9 +131,9 @@ public final class Constants
 
    public static final double ARM_TOTAL_TICKS = 185684;
    public static final double ARM_TOTAL_DEGREES = 209.1;
-   public static final double CANCODER_MIN = 28.5;
-   public static final double CANCODER_MAX = 237.6;
-   public static final double CANCODER_ZERO = 126.3;
+  //  public static final double CANCODER_MIN = 28.5;
+  //  public static final double CANCODER_MAX = 237.6;
+  //  public static final double CANCODER_ZERO = 126.3;
 
    public static final double PIVOT_HIGH = -1.28;
    public static final double PIVOT_TOTAL_ROTATIONS = 3.06;
